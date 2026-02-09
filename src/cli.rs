@@ -1,0 +1,80 @@
+
+use clap::Parser;
+// use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
+
+// / 定义 CLI 结构体
+#[derive(Parser, Debug)]
+#[command(
+    name = "primer demux",
+    version = "v0.0.1",
+    about = "匹配给定模式在序列文件中的近似匹配"
+)]
+pub struct Cli {
+
+    #[arg(long = "pipeline_version", default_value ="1")]
+    pub pipeline_version: String,
+
+    /// 指定 primer 序列文件 (FASTA 格式)
+    #[arg(short = 'p', long = "primer")]
+    pub primer: String,
+
+
+    // 匹配pattern时允许的最大错误率
+    #[arg(short = 'd', long = "max_distance",
+          value_parser = clap::value_parser!(u8),
+          default_value_t = 1)]
+    pub max_distance: u8,
+
+
+    /// 指定输入序列文件 (FASTA/FASTQ/BAM)
+    #[arg(short = 'i', long = "input_file")]
+    pub input_file: String,
+
+    /// 设置日志级别（可选），例如 "info", "debug", "trace"
+    #[arg(long, env = "RUST_LOG")]
+    pub log: Option<String>,
+
+    #[arg(short = 'o', long = "output_folder")]
+    pub output_folder: String,
+    
+    #[arg(long = "log_folder")]
+    pub log_folder: String,
+
+    // // 是否保存primer reads到单独的文件
+    // #[arg(long = "save_primer", default_value_t = false)]
+    // // #[arg(long, value_parser = clap::value_parser!(bool), default_value_t = false)]
+    // pub save_primer: bool,
+
+    // 是否在reads中保留primer序列,默认不保留
+    #[arg(long = "keep_primer", default_value_t = false)]
+    // #[arg(long, value_parser = clap::value_parser!(bool), default_value_t = false)]
+    pub keep_primer: bool,
+
+    #[arg(long = "tail_cutoff",
+          value_parser = clap::value_parser!(u8).range(0..=6),
+          default_value_t = 2)]
+    pub tail_cutoff: u8,
+
+    #[arg(long = "reservesed_threads",
+          value_parser = clap::value_parser!(u8).range(0..=6),
+          default_value_t = 2)]
+    pub reservesed_threads:u8,
+    
+    #[arg(long = "output_format", default_value ="fasta" ,       
+        value_parser = ["fasta", "fastq", "bam","fq", "fa"])]
+    pub output_format: String,
+   
+    /// 最小子读长度，默认50,如果是保留primer，是包含在里面的，需要适量增大该参数
+    #[arg(short = 'l', 
+    long = "min_subread_len", 
+    default_value_t = 50,
+    value_parser = clap::value_parser!(usize),)]
+    pub min_subread_len: usize,
+
+    /// 超过此阈值的，即使没有找到primer，也会透传出去，默认20
+    #[arg(long = "q_threshold",
+          value_parser = clap::value_parser!(u8).range(0..=60),
+          default_value_t = 20)]
+    pub q_threshold: u8,
+
+}
