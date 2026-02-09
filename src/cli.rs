@@ -71,10 +71,10 @@ pub struct Cli {
     value_parser = clap::value_parser!(usize),)]
     pub min_subread_len: usize,
 
-    /// 超过此阈值的，即使没有找到primer，也会透传出去，默认20
-    #[arg(long = "q_threshold",
+    /// 只处理超过该阈值的reads,进行demux，否则pass。尚未实现。
+    #[arg(long = "min_q",
           value_parser = clap::value_parser!(u8).range(0..=60),
           default_value_t = 20)]
-    pub q_threshold: u8,
+    pub min_q: u8,
 
 }

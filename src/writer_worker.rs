@@ -16,7 +16,7 @@ pub fn write_primer_demux_result_with_seperated_reads(
     output_format: &str,
     output_folder: &str,
     primer_demux_info: Receiver<(Vec<RecordType>, Vec<RecordType>, Vec<PrimerPair>)>,
-    q_threshold: Option<u8>,
+    // q_threshold: Option<u8>,
     save_primer: bool,
     primer_names: Vec<String>,
 ) -> anyhow::Result<()> {

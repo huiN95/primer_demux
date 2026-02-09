@@ -92,7 +92,7 @@ pub fn demux_pipeline_v1(cli: &Cli) -> Result<(), Box<dyn Error>> {
             &cli.output_format,
             &cli.output_folder,
             primer_receiver,
-            Some(cli.q_threshold),
+            // Some(cli.q_threshold),
             cli.keep_primer,
             output_names,
         )

@@ -3,14 +3,14 @@ use crate::core_context::PrimerCandidate;
 use crate::find_pattern::merge_non_overlapping_no_copy;
 use std::sync::Arc;
 
-use crate::primer_myers::{get_alignments_from_myers, Direction, MayersPattern};
+use crate::primer_myers::{get_alignments_from_myers, MayersPattern};
 
 use metrics::{self, counter, histogram};
 
 use std::collections::HashMap;
 
 use crate::core_context::PrimerPair;
-use tracing::{debug, info, level_filters};
+// use tracing::{debug, info, level_filters};
 
 pub fn primer_demuxer_v1(
     min_read_length: usize,
@@ -28,7 +28,7 @@ pub fn primer_demuxer_v1(
     }
 
     // let mut all_primer_pos = IndexMap::<Arc<str>, Vec<PrimerCandidate>>::new();
-    let mut leading_primer_pos = Vec::<PrimerCandidate>::new();
+    // let mut leading_primer_pos = Vec::<PrimerCandidate>::new();
 
     // loop all the patterns, to see which one is the best match
     let mut leading_keys: Vec<_> = primer_l_pattern.keys().cloned().collect();
@@ -49,7 +49,7 @@ pub fn primer_demuxer_v1(
             &mut candidates,
         );
     }
-    leading_primer_pos = merge_non_overlapping_no_copy(&mut candidates);
+    let leading_primer_pos = merge_non_overlapping_no_copy(&mut candidates);
 
     // for primer in leading_primer_pos.iter() {
     //     println!(
@@ -59,7 +59,7 @@ pub fn primer_demuxer_v1(
     // }
     let mut trailing_keys: Vec<_> = primer_t_pattern.keys().cloned().collect();
     trailing_keys.sort();
-    let mut trailing_primer_pos = Vec::<PrimerCandidate>::new();
+    // let mut trailing_primer_pos = Vec::<PrimerCandidate>::new();
     let mut candidates = Vec::new();
 
     for name in trailing_keys.iter() {
@@ -74,7 +74,7 @@ pub fn primer_demuxer_v1(
         );
         // 理论上都不应该有重叠
     }
-    trailing_primer_pos = merge_non_overlapping_no_copy(&mut candidates);
+    let trailing_primer_pos = merge_non_overlapping_no_copy(&mut candidates);
     // for primer in trailing_primer_pos.iter() {
     //     println!(
     //         "trailing primer {} has distance {} start with {}",
@@ -127,6 +127,7 @@ pub fn primer_demuxer_v1(
                         single_end: false,
                     };
                     result.push(primer_pair);
+                    pre_pair_end_postion = outter_position.1;
                 }
             }
 
