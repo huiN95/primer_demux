@@ -46,5 +46,18 @@ walkdir = "2.5.0"
 thiserror = "2.0.18"
 bio-types = "1.0.4"
 
+##[profile.release]
+##debug = true
+#[profile.release]
+#debug = 0
+#strip = "symbols"
+#lto = true
+#codegen-units = 1
+#panic = "abort"
+
 [profile.release]
-debug = true
+debug = 1
+strip = "debuginfo"   # 或者不 strip，在 CI 里分离符号
+lto = "thin"
+codegen-units = 1
+panic = "unwind"
