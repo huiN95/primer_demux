@@ -56,7 +56,7 @@ pub struct Cli {
     pub tail_cutoff: u8,
 
     #[arg(long = "reservesed_threads",
-          value_parser = clap::value_parser!(u8).range(0..=6),
+          value_parser = clap::value_parser!(u8).range(0..=255),
           default_value_t = 2)]
     pub reservesed_threads:u8,
     
