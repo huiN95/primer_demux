@@ -103,21 +103,25 @@ def mode_smoke_test(
     """
     Basic smoke test.
     """
+    # 1. Discover input files (BAM or FASTQ)
     test_files = sorted(test_file_dir.glob("*.bam"))
-    primer_file = test_file_dir / "primers.fasta"
-
     if not test_files:
-        # Fallback to fq if no bam
-        test_files = sorted(test_file_dir.glob("*.fq*"))
+        # Include .fastq, .fastq.gz, .fq, .fq.gz
+        test_files = sorted(list(test_file_dir.glob("*.fastq*")) + list(test_file_dir.glob("*.fq*")))
 
-    if not test_files:
-        raise FileNotFoundError(f"No test files found under {test_file_dir}")
-
+    # 2. Discover primer file
+    primer_file = test_file_dir / "primer40_v2.fasta"
     if not primer_file.exists():
-        # Try a more generic name if primers.fasta doesn't exist
+        primer_file = test_file_dir / "primers.fasta"
+    
+    if not primer_file.exists():
         primer_file = next(test_file_dir.glob("*primer*.fasta"), None)
-        if not primer_file:
-            raise FileNotFoundError(f"Primer pattern file not found in {test_file_dir}")
+
+    if not test_files:
+        raise FileNotFoundError(f"No test files (*.bam, *.fastq, *.fq) found under {test_file_dir}")
+
+    if not primer_file or not primer_file.exists():
+        raise FileNotFoundError(f"Primer pattern file not found in {test_file_dir}")
 
     output_dir = output_root / "smoke"
 
