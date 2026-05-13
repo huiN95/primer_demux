@@ -72,6 +72,8 @@ def docker_primer_demux(
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    flags = detect_cli_flags(docker_image)
+
     # Mount the entire output root instead of just the sample dir
     # to allow the container to create files and manage logs more flexibly.
     output_root = output_dir.parent.parent.resolve() 
