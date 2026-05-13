@@ -45,10 +45,11 @@ smoke_test:
   script:
     - echo "🧪 Running smoke test..."
     - mkdir -p ./ci_test_output
-    - python3 python_scripts/run_primer_test.py \
-        --test-file-dir $primer_SMOKE_TEST_DIR \
-        --output-root ./ci_test_output \
-        --docker-image $PROJECT_NAME:$TEMP_TAG
+    - >
+      python3 python_scripts/run_primer_test.py 
+      --test-file-dir "$primer_SMOKE_TEST_DIR" 
+      --output-root ./ci_test_output 
+      --docker-image "$PROJECT_NAME:$TEMP_TAG"
   artifacts:
     when: always
     paths:
