@@ -28,12 +28,12 @@ def detect_cli_flags(docker_image: str) -> Dict[str, str]:
     Detect which CLI flag style the image supports.
     Supports both --arg-name and --arg_name due to recent changes.
     """
+    # Dockerfile uses ENTRYPOINT, so we just pass --help
     help_cmd = [
         "docker",
         "run",
         "--rm",
         docker_image,
-        "primer_demux",
         "--help",
     ]
 
@@ -74,6 +74,7 @@ def docker_primer_demux(
 
     flags = detect_cli_flags(docker_image)
 
+    # Dockerfile uses ENTRYPOINT, so we DO NOT repeat the binary name
     cmd = [
         "docker",
         "run",
@@ -82,7 +83,6 @@ def docker_primer_demux(
         "-v", f"{str(output_dir)}:{str(output_dir)}",
         "--user", f"{os.getuid()}:{os.getgid()}",
         docker_image,
-        "primer_demux",
         "-i", str(infile),
         "-o", str(output_dir),
         flags["primer"], str(primer),
