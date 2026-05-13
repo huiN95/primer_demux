@@ -42,31 +42,34 @@ build_temp_image:
 
 smoke_test:
   stage: smoke_test
-  needs:
-    - build_temp_image
   script:
     - echo "🧪 Running smoke test..."
-    - rm -rf ci_test_output
-    - mkdir -p ci_test_output
+    - whoami
+    - id
+    - echo "Smoke test dir = $primer_SMOKE_TEST_DIR"
+    - ls -lh "$primer_SMOKE_TEST_DIR"
+
+    # 输出目录放到你指定的 /data/CI_CD_DATASETS/PROJECT_PRIMER/smoke_test 下面
+    - mkdir -p "$primer_SMOKE_TEST_DIR/ci_test_output"
+
+    # 清空旧结果，避免上一次结果干扰本次测试
+    - rm -rf "$primer_SMOKE_TEST_DIR/ci_test_output"/*
+
+    # 确保 gitlab-runner / docker 容器内用户可写
+    - chmod -R 777 "$primer_SMOKE_TEST_DIR/ci_test_output"
+
     - >
       python3 python_scripts/run_primer_test.py
-      --test-file-dir "$PRIMER_SMOKE_TEST_DIR"
-      --output-root "$CI_PROJECT_DIR/ci_test_output"
+      --test-file-dir "$primer_SMOKE_TEST_DIR"
+      --output-root "$primer_SMOKE_TEST_DIR/ci_test_output"
       --docker-image "$PROJECT_NAME:$TEMP_TAG"
-  artifacts:
-    when: always
-    paths:
-      - ci_test_output/
-    expire_in: 1 week
-  rules:
-    # 分支提交时跑 smoke test
-    - if: '$CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE != "web"'
-      when: on_success
 
-    # tag 发布时也跑 smoke test，避免未经测试直接发布
-    - if: '$CI_COMMIT_TAG'
-      when: on_success
+    - echo "Smoke test output:"
+    - find "$primer_SMOKE_TEST_DIR/ci_test_output" -maxdepth 4 -type f -exec ls -lh {} \;
 
+  except:
+    - tags
+    - web
 
 push_release:
   stage: push_release
