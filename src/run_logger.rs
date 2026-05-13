@@ -25,7 +25,12 @@ pub fn init_tracing_log(cli: &Cli) -> tracing_appender::non_blocking::WorkerGuar
     if !log_path.exists() {
         create_dir_all(log_path).unwrap();
     }
-    let run_log_path = log_path.join(format!("{}_primer_demux_run.log", cli.log_folder));
+    let folder_name = log_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("primer_demux");
+
+    let run_log_path = log_path.join(format!("{}_run.log", folder_name));
 
     // let run_log_filepath = format!("{}_primer_demux_run.log", log_path);
     let log_file = File::create(&run_log_path).unwrap_or_else(|e| {

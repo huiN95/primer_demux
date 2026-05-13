@@ -72,15 +72,16 @@ def docker_primer_demux(
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    flags = detect_cli_flags(docker_image)
+    # Mount the entire output root instead of just the sample dir
+    # to allow the container to create files and manage logs more flexibly.
+    output_root = output_dir.parent.parent.resolve() 
 
-    # Dockerfile uses ENTRYPOINT, so we DO NOT repeat the binary name
     cmd = [
         "docker",
         "run",
         "--rm",
         "-v", "/data:/data:ro",
-        "-v", f"{str(output_dir)}:{str(output_dir)}",
+        "-v", f"{str(output_root)}:{str(output_root)}",
         "--user", f"{os.getuid()}:{os.getgid()}",
         docker_image,
         "-i", str(infile),
