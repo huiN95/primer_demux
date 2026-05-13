@@ -33,26 +33,29 @@ pub fn demux_pipeline_v1(cli: &Cli) -> Result<(), Box<dyn Error>> {
         // let
         scope.spawn(move || {
             if let Err(e) = read_sequences_to_queue(&cli.input_file, seq_sender) {
-                eprintln!("[Producer] 错误: {}", e);
+                eprintln!("[Producer] Error: {}", e);
             }
-            println!("[Producer] 已完成发送。");
+            println!("[Producer] Completed sending.");
         });
 
-        // b) 多个 demux 线程
+        // b) Multiple demux threads
         // ---------------------------
         // let worker_count = 20;
-        let worker_count = thread::available_parallelism()
-            .map(|n| n.get().saturating_sub(cli.reservesed_threads.into())) // 减去 4，不小于 0
-            .unwrap_or(1); // 获取失败时默认 1
-                           // .max(1)
-                           // .min(1);
-                           // .min(5); // 确保最终值不小于 10
 
-        println!("[Producer] 启动 {} 个 demux 线程...\n", worker_count);
+        let worker_count: usize = match cli.threads {
+            0 => std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(1)
+                .saturating_sub(2)
+                .max(1),
+            n => n as usize,
+        };
+
+        println!("[Producer] Starting {} demux threads...\n", worker_count);
         let patterns = &patterns;
 
         for _ in 0..worker_count {
-            // 如果 patterns 很大，需要 Arc::clone；若直接 patterns.clone() 也可以
+            // If patterns are large, Arc::clone is needed; patterns.clone() is also fine
 
             let seq_receiver_clone = seq_receiver.clone();
             let primer_sender_clone = primer_sender.clone();
@@ -76,8 +79,8 @@ pub fn demux_pipeline_v1(cli: &Cli) -> Result<(), Box<dyn Error>> {
                     }
 
                     // println!("[Demux] finished");
-                }, // 同理，如果需要让 writer 知道没有更多数据，可在所有 demux 结束前
-                   // 最后一个线程里 drop(primer_sender_clone)。
+                }, // Similarly, if the writer needs to know no more data is available, 
+                   // drop(primer_sender_clone) in the last thread before all demux ends.
             );
         }
         drop(seq_receiver);

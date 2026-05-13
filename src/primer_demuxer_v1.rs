@@ -21,7 +21,7 @@ pub fn primer_demuxer_v1(
     target: &ReadRecord,
 ) -> Result<Vec<PrimerPair>, Box<dyn std::error::Error>> {
     let mut result = Vec::<PrimerPair>::new();
-    // 如果序列长度小于等于2倍的intial_primer_check_len, 直接返回空结果
+    // If sequence length is <= 2 * min_read_length, return empty result
     if target.sequence.len() <= 2 * min_read_length {
         counter!("filtered_reads_too_short").increment(1 as u64);
         return Ok(result);
@@ -72,7 +72,7 @@ pub fn primer_demuxer_v1(
             max_primer_distance,
             &mut candidates,
         );
-        // 理论上都不应该有重叠
+        // Theoretically, there should be no overlaps
     }
     let trailing_primer_pos = merge_non_overlapping_no_copy(&mut candidates);
     // for primer in trailing_primer_pos.iter() {
@@ -81,8 +81,8 @@ pub fn primer_demuxer_v1(
     //         primer.name, primer.distance, primer.start
     //     )
     // }
-    // 此时得到的primer的leading和trailing序列都是排好序的。
-    // 两者都不应该为空
+    // Leading and trailing primer sequences are now sorted.
+    // Both should not be empty
     if trailing_primer_pos.is_empty() || leading_primer_pos.is_empty() {
         return Ok(result);
     } else {
@@ -110,7 +110,7 @@ pub fn primer_demuxer_v1(
                     let right_distance = trailing_primer_pos[trailing_idx].distance;
 
                     let distance = (left_distance, right_distance);
-                    // 构建为左闭右包。
+                    // Construct as left-closed and right-open.
                     let outter_position = (
                         leading_primer_pos[leading_idx].start,
                         trailing_primer_pos[trailing_idx].end,

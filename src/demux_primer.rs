@@ -29,7 +29,7 @@ pub fn demux_reads_by_primer(
     // println!("{:?}", barcode_f_myers.keys());
     for current_record in receiver {
         // let mut current_primer_distance: u8 = max_primer_distance;
-        // // TODO 在这里限制reads的长度
+        // // TODO Limit read length here
         //     counter!("filtered_reads_too_short").increment(1 as u64);
 
         // print!("max primer tolerance: {}", max_primer_distance);

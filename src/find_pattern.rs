@@ -10,10 +10,10 @@ pub fn merge_non_overlapping_no_copy(
         return Vec::new();
     }
 
-    // 1) 先按 start 排序（原地排序不产生克隆）
+    // 1) Sort by start first (in-place sorting, no cloning)
     candidates.sort_by_key(|c| c.start);
 
-    // 2) 把元素从 candidates “搬走”，边遍历边合并到 out
+    // 2) Move elements from candidates, merging into out while iterating
     let mut out: Vec<PrimerCandidate> = Vec::with_capacity(candidates.len());
 
     for cand in candidates.drain(..) {
@@ -25,10 +25,10 @@ pub fn merge_non_overlapping_no_copy(
         let last = out.last_mut().unwrap();
 
         if cand.start >= last.end {
-            // 不重叠，直接加入
+            // No overlap, add directly
             out.push(cand);
         } else {
-            // 有重叠：按你的规则选择保留谁
+            // Overlap: choose which one to keep based on rules
             counter!("primer_overlap_cnts").increment(1);
 
             let better = (cand.distance < last.distance)
@@ -36,13 +36,13 @@ pub fn merge_non_overlapping_no_copy(
                     && (cand.end - cand.start) > (last.end - last.start));
 
             if better {
-                *last = cand; // 这里是 move：把 cand 覆盖进 last（不会克隆）
+                *last = cand; // This is a move: overwrite last with cand (no cloning)
             }
-            // 否则丢弃 cand（自动 drop）
+            // Otherwise discard cand (automatically dropped)
         }
     }
 
-    // 此时 candidates 已经被 drain 清空
+    // At this point, candidates has been cleared by drain
     out
 }
 
@@ -50,10 +50,10 @@ pub fn get_pattern_keys(pattern_records: &Vec<ReadRecord>) -> Vec<String> {
     let mut set: BTreeSet<String> = pattern_records
         .iter()
         .map(|r| {
-            // 假设字段名是 r.name: Arc<str>（按你实际字段名改）
+            // Assume field name is r.id: Arc<str> (modify according to actual field name)
             let s: &str = r.id.as_ref();
 
-            // 去掉尾部 2 个字符（不足 2 个就变成空串）
+            // Remove last 2 characters (if less than 2, becomes empty string)
             let trimmed = if s.len() >= 2 { &s[..s.len() - 2] } else { "" };
 
             trimmed.to_string()
@@ -69,35 +69,35 @@ pub fn get_pattern_keys(pattern_records: &Vec<ReadRecord>) -> Vec<String> {
 //         return Vec::new();
 //     }
 
-//     // 1. 先按 start 排序
+//     // 1. Sort by start first
 //     candidates.sort_by_key(|c| c.start);
 
-//     // 2. 用下标 i 来管理“合并后区间”末尾
+//     // 2. Use index i to manage the end of the "merged interval"
 //     let mut i = 0;
 //     for j in 1..candidates.len() {
 //         if candidates[j].start > candidates[i].end {
-//             // 不重叠，指针 i 往后走一格
+//             // No overlap, increment index i
 //             i += 1;
 //             candidates[i] = candidates[j].clone();
 //         } else {
 //             counter!("primer overlap cnts").increment(1);
-//             // 有重叠，若距离更小，则替换
+//             // Overlap, replace if distance is smaller
 //             if candidates[j].distance < candidates[i].distance {
 //                 candidates[i] = candidates[j].clone();
 //             } else if candidates[j].distance == candidates[i].distance {
 //                 if candidates[j].end - candidates[j].start > candidates[i].end - candidates[i].start
 //                 {
-//                     // 如果距离相同，且新区间更长，则替换
+//                     // If distance is the same and new interval is longer, replace
 //                     candidates[i] = candidates[j];
 //                 }
 //             }
 //         }
 //     }
 
-//     // 3. truncate 保留前 i+1 个元素，即合并结果
+//     // 3. truncate to keep the first i+1 elements, which are the merge result
 //     candidates.truncate(i + 1);
 
-//     // 4. 利用 std::mem::take “搬走”这 i+1 个元素，避免克隆
+//     // 4. Use std::mem::take to move these i+1 elements, avoiding cloning
 //     std::mem::take(candidates)
 // }
 

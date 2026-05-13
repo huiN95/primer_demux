@@ -49,7 +49,7 @@ const AMBIGS: &[(u8, &[u8])] = &[
     (b'N', b"ACGT"),
 ];
 
-/// 将一批 `ReadRecord` 转成 `HashMap<id, MyersType>`
+/// Convert a batch of `ReadRecord` into `HashMap<id, MyersType>`
 // pub fn build_map(records: &[ReadRecord], builder: &MyersBuilder) -> HashMap<Arc<str>, MayersType> {
 //     records
 //         .iter()
@@ -125,25 +125,25 @@ pub fn get_alignments_from_myers(
 //             b'T' => b'A',
 //             b'C' => b'G',
 //             b'G' => b'C',
-//             _ => base, // 保持其他字符不变
+//             _ => base, // Keep other characters unchanged
 //         })
 //         .collect()
 // }
 
-/// 统一把 builder 的结果包成 MayersType
+/// Wrap builder results into MayersPattern
 #[inline]
 fn build_myers_enum(builder: &MyersBuilder, pat: &[u8]) -> MayersPattern {
-    // 规则：短到 64 的用 Myers64，更长的用 MyersLong
+    // Rule: use Myers64 for length up to 64, MyersLong for longer
     let pattern = String::from_utf8_lossy(pat).into_owned();
 
     if pat.len() <= 64 {
-        let m64 = builder.build_64(pat); // ← 按你的实际 API 名字改
+        let m64 = builder.build_64(pat); // ← modify according to actual API name
         MayersPattern::Myers64 {
             myers: m64,
             pattern,
         }
     } else {
-        let ml = builder.build_long(pat); // ← 按你的实际 API 名字改
+        let ml = builder.build_long(pat); // ← modify according to actual API name
         MayersPattern::MyersLong { myers: ml, pattern }
     }
 }
@@ -201,20 +201,20 @@ pub fn get_myers_from_primers(
             }
             // println!("{}", String::from_utf8_lossy(pattern));
 
-            // 仅用来判断 _L/_T，不再用于生成 key
+            // Only used to determine _L/_T, no longer used to generate key
             let is_l = if id.ends_with("_L") {
                 true
             } else if id.ends_with("_T") {
                 false
             } else {
-                // 此时应该panic，这个pattern不符合预设
+                // Should panic here, this pattern does not match the preset
                 return None;
             };
 
-            // 根据方向 + 后缀决定是否取 revcomp
+            // Decide whether to use revcomp based on direction + suffix
             let need_revcomp = match (direction, is_l) {
                 (Direction::Forward, true) => false,
-                (Direction::Forward, false) => false, // _L: Forward 原序列
+                (Direction::Forward, false) => false, // _L: Forward original sequence
                 (Direction::Reverse, true) => true,   // _L: Reverse revcomp
                 (Direction::Reverse, false) => true,  // _T: Forward revcomp
             };
@@ -226,7 +226,7 @@ pub fn get_myers_from_primers(
                 build_myers_enum(&builder, pattern)
             };
 
-            // ✅ key 用原始 id（包含 _L/_T），避免重名覆盖
+            // ✅ use original id (including _L/_T) as key to avoid name collisions
             Some((Arc::<str>::from(id), myers))
         })
         .collect()

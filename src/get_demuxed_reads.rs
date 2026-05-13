@@ -29,7 +29,7 @@ pub fn prepare_record_to_writer(
         rec,
         &primer_paris,
         min_subread_len,
-        // None, // 质量阈值
+        // None, // quality threshold
         output_folder,
         keep_primer_flag,
         output_format,
@@ -40,7 +40,7 @@ pub fn prepare_record_to_writer(
 }
 
 fn make_name(rec_id: &str, primer_id: &str, s: usize, e: usize) -> String {
-    // 预估容量：id+primer+数字
+    // Estimated capacity: id+primer+number
     let mut name = String::with_capacity(rec_id.len() + primer_id.len() + 32);
     use std::fmt::Write;
     write!(&mut name, "{}:{}/{}-{}", rec_id, primer_id, s, e).unwrap();
@@ -57,7 +57,7 @@ fn get_subread_record_with_keep_primer_option(
     output_format: &str,
 ) -> anyhow::Result<(Vec<RecordType>, Vec<RecordType>)> {
     // let path: &Path = output_file.as_ref();
-    // let _stem = path.with_extension(""); // 去掉 .fasta / .fastq / .bam
+    // let _stem = path.with_extension(""); // Remove .fasta / .fastq / .bam
     // let ext = path
     //     .extension()
     //     .and_then(|s| s.to_str())
@@ -95,7 +95,7 @@ fn get_subread_record_with_keep_primer_option(
                     );
                     demuxed_reads.push(RecordType::Fasta(fasta_rec));
                 } else {
-                    // 读长不够
+                    // insufficient read length
                     let name = format!(
                         "{}:{}/{}-{}",
                         rec.id, pos.primer_id, pos.inner_position.0, pos.inner_position.1
@@ -133,7 +133,7 @@ fn get_subread_record_with_keep_primer_option(
             for (idx, pos) in primer_position.iter().enumerate() {
                 let start = pos.outter_position.0;
                 let end = pos.outter_position.1;
-                // 头部的数据够长才行
+                // Header data must be long enough
                 if pre_end + min_subread_len < start {
                     let name = format!("{}:{}/{}-{}", rec.id, pos.primer_id, pre_end, start);
 
@@ -144,7 +144,7 @@ fn get_subread_record_with_keep_primer_option(
                         rec.quality
                             .as_deref() // Option<&[u8]>
                             .expect("missing quality")
-                            .get(pre_end..start) // Option<&[u8]> 取子片段
+                            .get(pre_end..start) // Option<&[u8]> take sub-fragment
                             .ok_or_else(|| anyhow::anyhow!("bad range: {}..{}", pre_end, start))?, // quality: Option<&[u8]>
                                                                                                    // .as_ref(),
                     );
@@ -161,7 +161,7 @@ fn get_subread_record_with_keep_primer_option(
                         rec.quality
                             .as_deref() // Option<&[u8]>
                             .expect("missing quality")
-                            .get(start..end) // Option<&[u8]> 取子片段
+                            .get(start..end) // Option<&[u8]> take sub-fragment
                             .expect("bad range"), // quality: Option<&[u8]>
                     );
 
@@ -178,7 +178,7 @@ fn get_subread_record_with_keep_primer_option(
                         rec.quality
                             .as_deref() // Option<&[u8]>
                             .expect("missing quality")
-                            .get(pos.inner_position.0..pos.inner_position.1) // Option<&[u8]> 取子片段
+                            .get(pos.inner_position.0..pos.inner_position.1) // Option<&[u8]> take sub-fragment
                             .ok_or_else(|| {
                                 anyhow::anyhow!(
                                     "bad range: {}..{}",
@@ -191,7 +191,7 @@ fn get_subread_record_with_keep_primer_option(
                     demuxed_reads.push(RecordType::Fastq(fastq_rec));
                 }
                 if idx == primer_position.len() - 1 {
-                    // 最后一段够长才行，否则就不要了
+                    // Last segment must be long enough, otherwise discard
                     if rec.sequence.len() > pos.outter_position.1 + min_subread_len {
                         let name = format!(
                             "{}:{}/{}-{}",
@@ -207,7 +207,7 @@ fn get_subread_record_with_keep_primer_option(
                             rec.quality
                                 .as_deref() // Option<&[u8]>
                                 .expect("missing quality")
-                                .get(pos.outter_position.1..rec.sequence.len()) // Option<&[u8]> 取子片段
+                                .get(pos.outter_position.1..rec.sequence.len()) // Option<&[u8]> take sub-fragment
                                 .ok_or_else(|| {
                                     anyhow::anyhow!(
                                         "bad range: {}..{}",
@@ -230,7 +230,7 @@ fn get_subread_record_with_keep_primer_option(
             let mut pre_end = 0;
             // let mut cnt: i32 = 0;
 
-            // 头部的数据够长才行
+            // Header data must be long enough
             for (idx, pos) in primer_position.iter().enumerate() {
                 let start = pos.outter_position.0;
                 let end = pos.outter_position.1;
@@ -246,7 +246,7 @@ fn get_subread_record_with_keep_primer_option(
                             .as_ref() // Option<&Vec<u8>>
                             .expect("missing quality")[pre_end..start]
                             .as_ref(),
-                    ); // 第 2 个参数是 CIGAR 向量
+                    ); // 2nd param is CIGAR vector
                     bam_rec.set_flags(0x4);
                     // bam_rec.push_aux(b"np", Aux::I8(1)).unwrap();
                     // bam_rec.push_aux(b"cx", Aux::I8(3)).unwrap();
@@ -289,7 +289,7 @@ fn get_subread_record_with_keep_primer_option(
                             .as_ref() // Option<&Vec<u8>>
                             .expect("missing quality")[start..end]
                             .as_ref(),
-                    ); // 第 2 个参数是 CIGAR 向量
+                    ); // 2nd param is CIGAR vector
                     bam_rec.set_flags(0x4);
                     // bam_rec.push_aux(b"np", Aux::I8(1)).unwrap();
                     // bam_rec.push_aux(b"cx", Aux::I8(3)).unwrap();
@@ -333,7 +333,7 @@ fn get_subread_record_with_keep_primer_option(
                             .as_ref() // Option<&Vec<u8>>
                             .expect("missing quality")[pos.inner_position.0..pos.inner_position.1]
                             .as_ref(),
-                    ); // 第 2 个参数是 CIGAR 向量
+                    ); // 2nd param is CIGAR vector
 
                     bam_rec.set_flags(0x4);
                     // bam_rec.push_aux(b"np", Aux::I8(1)).unwrap();
@@ -361,7 +361,7 @@ fn get_subread_record_with_keep_primer_option(
                 if idx == primer_position.len() - 1 {
                     let tail_start = pos.outter_position.1;
                     if rec.sequence.len() < tail_start + min_subread_len {
-                        // 最后一段够长才行，否则就不要了
+                        // Last segment must be long enough, otherwise discard
                         continue;
                     }
                     let name = format!(
@@ -380,7 +380,7 @@ fn get_subread_record_with_keep_primer_option(
                             .as_ref() // Option<&Vec<u8>>
                             .expect("missing quality")[pos.outter_position.1..rec.sequence.len()]
                             .as_ref(),
-                    ); // 第 2 个参数是 CIGAR 向量
+                    ); // 2nd param is CIGAR vector
 
                     bam_rec.set_flags(0x4);
                     // bam_rec.push_aux(b"np", Aux::I8(1)).unwrap();
@@ -415,8 +415,8 @@ fn get_subread_record_with_keep_primer_option(
             }
         }
 
-        // ---------- 其他格式 ----------
-        _ => anyhow::bail!("不支持的输出格式: {output_format}"),
+        // ---------- Other formats ----------
+        _ => anyhow::bail!("Unsupported output format: {output_format}"),
     }
     Ok((demuxed_reads, unused_reads))
 }

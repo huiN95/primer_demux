@@ -9,19 +9,23 @@ stages:
   - nodiff_test
   - push_release
   - package
+  - push_ali
 
 variables:
   PROJECT_NAME: primer_demux
   TEMP_TAG: tmp-$CI_COMMIT_SHORT_SHA
-  # primer_SMOKE_TEST_DIR: /data/CI_CD_DATASETS/PROJECT_primer/smoke_test
-  # ASSIGN_BARCODE_TEST_DIR: /data/CI_CD_DATASETS/PROJECT_primer/assign_barcode_test
+  primer_SMOKE_TEST_DIR: /data/CI_CD_DATASETS/PROJECT_PRIMER/smoke_test
   RELEASE_TAG: $CI_COMMIT_TAG
   CI_REGISTRY_IMAGE: 192.168.3.38:5000/algo/primer_demux
+  ALI_ACR_REGISTRY_IMAGE: geneus-registry.cn-hongkong.cr.aliyuncs.com/algo/primer_demux
+
   GIT_SUBMODULE_STRATEGY: recursive
+    # 上一次正式发布版本，用作 no-diff 对照
+  STABLE_TAG: stable
 
 
 # ===============================
-# 1. Push 到 main 分支流程
+# 1. Workflow for Pushing to main branch
 # ===============================
 
 
@@ -32,6 +36,24 @@ build_temp_image:
     # - bash -c 'source ~/.bashrc && echo `python --version` '
     - echo "📦 Building temp image..."
     - DOCKER_BUILDKIT=0 docker build -t $PROJECT_NAME:$TEMP_TAG .
+  except:
+    - tags
+    - web
+
+smoke_test:
+  stage: smoke_test
+  script:
+    - echo "🧪 Running smoke test..."
+    - mkdir -p ./ci_test_output
+    - python3 python_scripts/run_primer_test.py \
+        --test-file-dir $primer_SMOKE_TEST_DIR \
+        --output-root ./ci_test_output \
+        --docker-image $PROJECT_NAME:$TEMP_TAG
+  artifacts:
+    when: always
+    paths:
+      - ./ci_test_output/
+    expire_in: 1 week
   except:
     - tags
     - web
@@ -47,3 +69,20 @@ push_release:
   only:
     - tags
 
+
+push_ali:
+  stage: push_ali
+  needs:
+    - push_release
+  script:
+    - whoami
+    - echo "Pushing release image to Aliyun ACR"
+    - echo "Source image = ${CI_REGISTRY_IMAGE}:${RELEASE_TAG}"
+    - echo "Target image = ${ALI_ACR_REGISTRY_IMAGE}:${RELEASE_TAG}"
+    - docker pull ${CI_REGISTRY_IMAGE}:${RELEASE_TAG}
+    - docker tag ${CI_REGISTRY_IMAGE}:${RELEASE_TAG} ${ALI_ACR_REGISTRY_IMAGE}:${RELEASE_TAG}
+    - docker push ${ALI_ACR_REGISTRY_IMAGE}:${RELEASE_TAG}
+    - echo "Push to Aliyun ACR done"
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: on_success

@@ -19,12 +19,12 @@ use serde::Serialize;
 
 // pub type SharedWriter = Arc<Mutex<Box<dyn ReadWriter + Send>>>;
 
-// main writer 是独占的；uncertain 是共享的
+// main writer is exclusive; uncertain is shared
 // pub type DoubleWriter = (Box<dyn ReadWriter + Send>, SharedWriter);
 
 pub fn read_sequences(input_path: &str) -> Result<Vec<ReadRecord>, anyhow::Error> {
     let path: &Path = input_path.as_ref();
-    // let stem = path.with_extension(""); // 去掉 .fasta / .fastq / .bam
+    // let stem = path.with_extension(""); // Remove .fasta / .fastq / .bam
     let ext = path
         .extension()
         .and_then(|s| s.to_str())
@@ -35,7 +35,7 @@ pub fn read_sequences(input_path: &str) -> Result<Vec<ReadRecord>, anyhow::Error
         "fa" | "fasta" => read_fasta_sequences(input_path),
         "fq" | "fastq" => read_fastq_sequences(input_path),
         "bam" => read_bam_sequences(input_path),
-        _ => bail!("不支持的输入格式：{ext}"),
+        _ => bail!("Unsupported input format: {ext}"),
     }
 }
 
@@ -85,7 +85,7 @@ pub fn read_bam_sequences(input_path: &str) -> Result<Vec<ReadRecord>, anyhow::E
         cur_record.id = Arc::<str>::from(String::from_utf8(record.qname().to_vec()).unwrap());
         cur_record.sequence = record.seq().as_bytes().to_vec();
         let qual_ascii: Vec<u8> = record // &bam::Record
-            .qual() // &[u8]（裸 PHRED）
+            .qual() // &[u8] (naked PHRED)
             .to_vec();
         cur_record.quality = Some(qual_ascii);
         if let Some(dw) = record.array_u8(b"dw") {
@@ -132,15 +132,15 @@ pub trait ReadWriter {
     fn write_prepared_record(&mut self, record: &[RecordType]) -> io::Result<()>;
     fn write_primer_record(&mut self, record: &RecordType) -> io::Result<()>;
 
-    /// 一些格式需要 flush/close（bam 会在 Drop 时关闭），
-    /// 可以在 trait 里预留可选操作。
+    /// Some formats need flush/close (bam closes on Drop),
+    /// optional operations can be reserved in the trait.
     fn finish(&mut self) -> io::Result<()> {
         Ok(())
     }
 }
 
 // type DoubleWriter = (
-//     Box<dyn ReadWriter>, // 正常 reads
+//     Box<dyn ReadWriter>, // normal reads
 //     Box<dyn ReadWriter>, // uncertain
 // );
 pub struct FastaWriter {
@@ -181,11 +181,11 @@ impl ReadWriter for FastqWriter {
         for r in records {
             match r {
                 RecordType::Fastq(rec) => {
-                    // 方法 ①：最简洁——把整条记录借给 writer
+                    // Method ①: most concise - lend the whole record to the writer
                     self.inner.write_record(&rec)?;
                 }
-                other => {
-                    // debug 时打开
+                _other => {
+                    // Enable during debugging
                     eprintln!("FastqWriter got non-fastq record:");
                 }
             }
@@ -195,7 +195,7 @@ impl ReadWriter for FastqWriter {
     }
     fn write_primer_record(&mut self, record: &RecordType) -> io::Result<()> {
         if let RecordType::Fastq(rec) = record {
-            // 方法 ①：最简洁——把整条记录借给 writer
+            // Method ①: most concise - lend the whole record to the writer
             self.inner.write_record(&rec)?;
         }
         Ok(())
@@ -206,7 +206,7 @@ impl ReadWriter for FastaWriter {
     fn write_prepared_record(&mut self, records: &[RecordType]) -> io::Result<()> {
         for r in records {
             if let RecordType::Fasta(rec) = r {
-                // 方法 ①：最简洁——把整条记录借给 writer
+                // Method ①: most concise - lend the whole record to the writer
                 self.inner.write_record(&rec)?;
             }
         }
@@ -214,7 +214,7 @@ impl ReadWriter for FastaWriter {
     }
     fn write_primer_record(&mut self, record: &RecordType) -> io::Result<()> {
         if let RecordType::Fasta(rec) = record {
-            // 方法 ①：最简洁——把整条记录借给 writer
+            // Method ①: most concise - lend the whole record to the writer
             self.inner.write_record(&rec)?;
         }
         Ok(())
@@ -225,7 +225,7 @@ impl ReadWriter for bam::Writer {
     fn write_prepared_record(&mut self, record: &[RecordType]) -> io::Result<()> {
         for rec in record {
             if let RecordType::BAM(bam_rec) = rec {
-                // 方法 ①：最简洁——把整条记录借给 writer
+                // Method ①: most concise - lend the whole record to the writer
                 self.write(&bam_rec)
                     .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
             }
@@ -235,7 +235,7 @@ impl ReadWriter for bam::Writer {
     }
     fn write_primer_record(&mut self, record: &RecordType) -> io::Result<()> {
         if let RecordType::BAM(rec) = record {
-            // 方法 ①：最简洁——把整条记录借给 writer
+            // Method ①: most concise - lend the whole record to the writer
             self.write(rec)
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         }
@@ -244,11 +244,11 @@ impl ReadWriter for bam::Writer {
 }
 
 fn sanitize_filename(s: &str) -> String {
-    // 让 input_name 安全用作文件名（按需增强）
+    // Make input_name safe for use as a filename (enhance as needed)
     s.replace('/', "_").replace('\\', "_").replace(' ', "_")
 }
 
-fn make_main_path_for_name(stem: &Path, name: &str, out_ext: &str) -> PathBuf {
+fn _make_main_path_for_name(stem: &Path, name: &str, out_ext: &str) -> PathBuf {
     let stem_s = stem.to_string_lossy();
     let name = sanitize_filename(name);
     let base = format!("{stem_s}_{name}");
@@ -265,19 +265,19 @@ pub fn make_writers(
         "fa" | "fasta" => "fa",
         "fq" | "fastq" => "fq",
         "bam" => "bam",
-        other => return Err(anyhow::anyhow!("不支持的输出格式：{other}")),
+        other => return Err(anyhow::anyhow!("Unsupported output format: {other}")),
     };
 
-    // 输出目录
+    // Output directory
     let out_dir = Path::new(output_folder);
-    std::fs::create_dir_all(out_dir)?; // 确保存在
+    std::fs::create_dir_all(out_dir)?; // Ensure existence
 
     let mut map: HashMap<String, Box<dyn ReadWriter + Send>> =
         HashMap::with_capacity(input_names.len());
 
     for name in input_names {
-        // 建议 sanitize，防止 primer 名里有 / 空格 等导致路径问题
-        let safe_name = sanitize_filename(&name); // 你工程里已有的话就用；否则自己实现
+        // Suggest sanitizing to prevent primer names with / or spaces from causing path issues
+        let safe_name = sanitize_filename(&name); // Use if already in your project; otherwise implement yourself
         let main_path = out_dir.join(format!("{safe_name}.{out_ext}"));
 
         let main_writer: Box<dyn ReadWriter + Send> = match out_ext {
@@ -296,7 +296,7 @@ pub fn make_writers(
             _ => unreachable!(),
         };
 
-        // key 仍然用原始 name（不影响 map 查找），文件名用 safe_name
+        // key still uses original name (doesn't affect map lookup), filename uses safe_name
         map.insert(name, main_writer);
     }
 
@@ -308,12 +308,12 @@ fn make_header<P: AsRef<Path>>(input: P) -> bam::Header {
     let cmdline: String = std::env::args().collect::<Vec<_>>().join(" ");
 
     let mut header: bam::Header = if path.is_dir() {
-        // 递归 / 非递归收集 .bam
+        // Recursively / non-recursively collect .bam
         let bam_files: Vec<PathBuf> = collect_bam_files(path);
         if bam_files.is_empty() {
             println!("bam path: {:?}", path);
             println!("bam files: {:?}", bam_files);
-            panic!("没有找到 BAM 文件");
+            panic!("No BAM files found");
         }
         let bam_reader = BAMReader::from_path(&bam_files[0]).expect("open first bam in folder");
         bam::Header::from_template(bam_reader.header())
@@ -324,8 +324,8 @@ fn make_header<P: AsRef<Path>>(input: P) -> bam::Header {
 
     let mut hd = bam::header::HeaderRecord::new(b"PG");
     hd.push_tag(b"PN", &"primer_demux");
-    hd.push_tag(b"ID", &"v0.0.1");
-    hd.push_tag(b"VN", &"v0.0.1");
+    hd.push_tag(b"ID", &"v0.0.2");
+    hd.push_tag(b"VN", &"v0.0.2");
     hd.push_tag(b"CL", &cmdline);
     header.push_record(&hd);
 
@@ -355,7 +355,7 @@ pub fn detect_format_from_path(path: &Path) -> io::Result<OutputFormat> {
     }
 }
 
-/// 行写入器（纯文本，无压缩）
+/// Line writer (plain text, no compression)
 pub enum LineSink {
     Jsonl {
         inner: BufWriter<File>,
@@ -378,7 +378,7 @@ pub fn open_line_sink(path: &Path) -> io::Result<LineSink> {
         },
     })
 }
-/// TSV 首行表头（只写一次）
+/// TSV first line header (write once)
 fn write_header_if_needed(sink: &mut LineSink) -> io::Result<()> {
     if let LineSink::Tsv {
         inner,
@@ -406,7 +406,7 @@ pub fn to_compact_rec(
     channel_idx: i32,
     distance: f32,
     single_end: bool,
-    distance_scale: u16, // 通常 10
+    distance_scale: u16, // Usually 10
 ) -> CompactRec {
     let d_scaled = (distance * distance_scale as f32).round() as u16;
     CompactRec {
@@ -417,7 +417,7 @@ pub fn to_compact_rec(
     }
 }
 
-/// 写一条记录
+/// Write a record
 pub fn write_record(sink: &mut LineSink, rec: &CompactRec) -> io::Result<()> {
     match sink {
         LineSink::Jsonl { inner } => {
@@ -435,7 +435,7 @@ pub fn write_record(sink: &mut LineSink, rec: &CompactRec) -> io::Result<()> {
     Ok(())
 }
 
-/// flush（可选显式调用）
+/// flush (optional explicit call)
 pub fn flush_sink(sink: &mut LineSink) -> io::Result<()> {
     match sink {
         LineSink::Jsonl { inner } => inner.flush(),

@@ -21,7 +21,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 pub fn init_tracing_log(cli: &Cli) -> tracing_appender::non_blocking::WorkerGuard {
     let log_path = Path::new(&cli.log_folder);
 
-    // 如果不存在就递归创建
+    // Create recursively if it does not exist
     if !log_path.exists() {
         create_dir_all(log_path).unwrap();
     }
@@ -40,7 +40,7 @@ pub fn init_tracing_log(cli: &Cli) -> tracing_appender::non_blocking::WorkerGuar
     let filter = if let Some(s) = &cli.log {
         EnvFilter::try_new(s).unwrap()
     } else {
-        // 没传参数、也没环境变量时的默认
+        // Default when no parameters or environment variables are passed
         EnvFilter::new("info")
     };
     tracing_subscriber::registry()
@@ -58,7 +58,7 @@ pub fn init_tracing_log(cli: &Cli) -> tracing_appender::non_blocking::WorkerGuar
     // tracing_subscriber::fmt()
     //     // .with_timer(UtcTime::rfc_3339())
     //     .with_timer(ChronoLocal::rfc_3339())
-    //     .with_ansi(false) //去掉颜色信息
+    //     .with_ansi(false) // remove color info
     //     .with_writer(non_blocking)
     //     .try_init()
     //     .expect("tracing_subscriber already initialized!");
@@ -73,10 +73,10 @@ pub struct MetricsGuard {
 
 impl Drop for MetricsGuard {
     fn drop(&mut self) {
-        // 收集指标
+        // collect metrics
         let report = self.handle.render();
 
-        // 尝试写入；如果失败，只打印日志，不 panic
+        // try to write; if failed, only print log, do not panic
         if let Err(e) = OpenOptions::new()
             .write(true)
             .create(true)
@@ -89,9 +89,9 @@ impl Drop for MetricsGuard {
     }
 }
 
-/// 在程序启动时调用，返回一个 MetricsGuard。
+/// Called at program start, returns a MetricsGuard.
 pub fn init_metrics<P: AsRef<Path>>(dir: P) -> Result<MetricsGuard, Box<dyn Error>> {
-    // 1. 构建 recorder
+    // 1. Build recorder
     let recorder = PrometheusBuilder::new()
         .set_buckets(
             vec![
@@ -103,18 +103,18 @@ pub fn init_metrics<P: AsRef<Path>>(dir: P) -> Result<MetricsGuard, Box<dyn Erro
         .unwrap()
         .build_recorder();
     let handle = recorder.handle();
-    // 2. 注册为全局。若已注册过，返回 Err，而不是 panic。
+    // 2. Register as global. If already registered, return Err instead of panic.
     metrics::set_global_recorder(Box::new(recorder)).unwrap();
 
-    // 3. 生成日志路径
-    // let path = dir.as_ref().join("primer_metrics.prom"); // 可根据需要改名/加时间戳
+    // 3. Generate log path
+    // let path = dir.as_ref().join("primer_metrics.prom"); // can change name/add timestamp as needed
     // let mut f = std::fs::File::create(&path).unwrap();
     let in_path = dir.as_ref();
     let out_path = if in_path.is_dir() {
-        // 传进来的是目录
+        // Passed a directory
         in_path.join("_primer_metrics.log")
     } else {
-        // 传进来的是文件；改文件名
+        // Passed a file; change filename
         let stem = in_path
             .file_stem()
             .and_then(|s| s.to_str())

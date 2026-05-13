@@ -1,0 +1,44 @@
+{% set name = "primer_demux" %}
+{% set version = "0.0.2" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://github.com/huiN95/{{ name }}/archive/refs/tags/v{{ version }}.tar.gz
+  sha256: 0000000000000000000000000000000000000000000000000000000000000000
+
+build:
+  number: 0
+  run_exports:
+    - {{ pin_subpackage(name, max_pin="x.x") }}
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - rust
+    - pkg-config
+  host:
+    - htslib
+    - zlib
+    - bzip2
+    - xz
+  run:
+    - htslib
+
+test:
+  commands:
+    - primer_demux --version
+    - primer_demux --help
+
+about:
+  home: https://github.com/huiN95/primer_demux
+  license: MIT
+  license_family: MIT
+  summary: "A high-performance tool for demultiplexing sequencing reads based on primer sequences."
+  dev_url: https://github.com/huiN95/primer_demux
+
+extra:
+  recipe-maintainers:
+    - huiN95

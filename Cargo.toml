@@ -1,6 +1,6 @@
 [package]
 name = "primer_demux"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 
 [dependencies]
@@ -11,30 +11,37 @@ bio = "3.0.0"
 
 
 tempfile = "3.24.0"
-flate2="1.1.8"
-tar="0.4.43"
+flate2 = "1.1.8"
+tar = "0.4.43"
 
-clap = {version="4.5", features=["derive", "env"]}
+clap = { version = "4.5", features = ["derive", "env"] }
 anyhow = "1.0.100"
 
 # lazy_static="1.5.0"
-ndarray="0.17.2"
-crossbeam="0.8.4"
+ndarray = "0.17.2"
+crossbeam = "0.8.4"
 tracing = "0.1.44"
-tracing-subscriber = {version="0.3.19", features=["json", "env-filter", "fmt", "time", "local-time","chrono"]}
-time="0.3.45"
+tracing-subscriber = { version = "0.3.19", features = [
+    "json",
+    "env-filter",
+    "fmt",
+    "time",
+    "local-time",
+    "chrono",
+] }
+time = "0.3.45"
 
-rayon="1.11.0"
+rayon = "1.11.0"
 tracing-appender = "0.2.4"
 
-num_cpus="1.16.0"
+num_cpus = "1.16.0"
 glob = "0.3.3"
 regex = "1.12.2"
-rust-htslib = "0.50.0"
+rust-htslib = "=0.46.0"
 
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.149"
-indicatif="0.18.3"
+indicatif = "0.18.3"
 # needletail = "0.5"
 seq_io = "0.3.4"
 itertools = "0.14.0"
@@ -57,7 +64,7 @@ bio-types = "1.0.4"
 
 [profile.release]
 debug = 1
-strip = "debuginfo"   # 或者不 strip，在 CI 里分离符号
+strip = "debuginfo" # Or don't strip, separate symbols in CI
 lto = "thin"
 codegen-units = 1
 panic = "unwind"

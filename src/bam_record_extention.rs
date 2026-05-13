@@ -8,7 +8,7 @@ pub struct ReadRecord {
     pub quality: Option<Vec<u8>>,
     pub dw: Option<Vec<u8>>,
     pub cr: Option<Vec<u8>>,
-    pub rq: Option<f32>, // 为了SMC获得更多的数据，默认设为0.8
+    pub rq: Option<f32>, // Set default to 0.8 to obtain more data for SMC
     pub np: Option<i32>,
     pub cx: Option<i32>,
     pub ch: Option<i32>,
@@ -52,8 +52,8 @@ pub trait AuxExt<'a> {
     fn string(&self, tag: &[u8]) -> Option<&str>; // RG:Z …
 }
 
-/// —— ② 为外部类型实现 ——
-/// 只要 trait 在你的 crate 里定义，就能给外部类型加实现。
+/// —— ② Implementation for external types ——
+/// As long as the trait is defined in your crate, you can implement it for external types.
 impl<'a> AuxExt<'a> for Record {
     fn i32(&self, tag: &[u8]) -> Option<i32> {
         match self.aux(tag).ok()? {
@@ -63,7 +63,7 @@ impl<'a> AuxExt<'a> for Record {
             _ => None,
         }
     }
-    /* ---------- 纯整数 ---------- */
+    /* ---------- Pure integers ---------- */
     fn u32(&self, tag: &[u8]) -> Option<u32> {
         match self.aux(tag).ok()? {
             Aux::U32(i) => Some(i),
@@ -73,7 +73,7 @@ impl<'a> AuxExt<'a> for Record {
         }
     }
 
-    /* ---------- 单精度浮点 ---------- */
+    /* ---------- Single precision floats ---------- */
     fn float(&self, tag: &[u8]) -> Option<f32> {
         match self.aux(tag).ok()? {
             Aux::Float(f) => Some(f),
@@ -81,7 +81,7 @@ impl<'a> AuxExt<'a> for Record {
         }
     }
 
-    /* ---------- u8 数组 ---------- */
+    /* ---------- u8 arrays ---------- */
     fn array_u8(&self, tag: &[u8]) -> Option<Vec<u8>> {
         match self.aux(tag).ok()? {
             Aux::ArrayU8(a) => Some(a.iter().collect()),
@@ -105,7 +105,7 @@ impl<'a> AuxExt<'a> for Record {
         }
     }
 
-    /* ---------- f32 数组 ---------- */
+    /* ---------- f32 arrays ---------- */
     fn array_f32(&self, tag: &[u8]) -> Option<Vec<f32>> {
         match self.aux(tag).ok()? {
             Aux::ArrayFloat(a) => Some(a.iter().collect()),

@@ -24,7 +24,7 @@ use crate::demux_pipeline_v1::demux_pipeline_v1;
 use tracing::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. 解析命令行参数
+    // 1. Parse command line arguments
 
     let cli = Cli::parse();
     let log_path = &cli.log_folder;

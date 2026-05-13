@@ -68,7 +68,7 @@ fn read_bam_2_queue<P: AsRef<Path>>(
     sender: Sender<ReadRecord>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut reader = BAMReader::from_path(&input_path).unwrap();
-    reader.set_threads(4)?; // 解压 4 线程
+    reader.set_threads(4)?; // 4 threads for decompression
 
     for record in reader.records() {
         let record = record?;
@@ -76,9 +76,9 @@ fn read_bam_2_queue<P: AsRef<Path>>(
         read_record.id = Arc::<str>::from(String::from_utf8(record.qname().to_vec()).unwrap());
         read_record.sequence = record.seq().as_bytes().to_vec();
         let qual_ascii: Vec<u8> = record // &bam::Record
-            .qual() // &[u8]（裸 PHRED）
+            .qual() // &[u8] (naked PHRED)
             .iter()
-            .map(|&q| if q == 255 { b'!' } else { q }) // 255 = “缺失质量”
+            .map(|&q| if q == 255 { b'!' } else { q }) // 255 = "missing quality"
             .collect();
         read_record.quality = Some(qual_ascii);
         if let Some(dw) = record.array_u8(b"dw") {
@@ -138,7 +138,7 @@ pub fn read_bam_folder(
         });
     }
     Ok(())
-    // 等待所有线程完成
+    // Wait for all threads to complete
 }
 
 pub fn collect_bam_files<P: Into<PathBuf>>(dir: P) -> Vec<PathBuf> {
@@ -156,13 +156,13 @@ pub fn read_sequences_to_queue<P: AsRef<Path>>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let path = input_path.as_ref();
 
-    // === ① 先判断是不是目录 ===
+    // === ① Check if it is a directory ===
     if path.is_dir() {
-        // 这里把 `Path` 转回 `&Path` 传给 folder 函数
+        // convert `Path` back to `&Path` and pass to folder function
         return read_bam_folder(path, sender);
     }
 
-    // === ② 再按扩展名区分文件格式 ===
+    // === ② Distinguish file formats by extension ===
     let ext = path
         .extension()
         .and_then(|s| s.to_str())
