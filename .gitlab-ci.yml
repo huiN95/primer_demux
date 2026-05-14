@@ -5,16 +5,29 @@ default:
 stages:
   - build_temp_image
   - smoke_test
+  - regression_test
+  - nodiff_test
   - push_release
+  - package
   - push_ali
 
 variables:
   PROJECT_NAME: primer_demux
   TEMP_TAG: tmp-$CI_COMMIT_SHORT_SHA
 
+  # smoke test 数据目录
+  # 这个目录下应包含：
+  #   Barcode2.fastq
+  #   primer40_v2.fasta
   PRIMER_SMOKE_TEST_DIR: /data/CI_CD_DATASETS/PROJECT_PRIMER/smoke_test
 
+  # smoke test 输出目录
+  # 最终输出会是：
+  # /data/CI_CD_DATASETS/PROJECT_PRIMER/smoke_test/ci_test_output/smoke/Barcode2
+  PRIMER_SMOKE_OUTPUT_DIR: /data/CI_CD_DATASETS/PROJECT_PRIMER/smoke_test/ci_test_output
+
   RELEASE_TAG: $CI_COMMIT_TAG
+
   CI_REGISTRY_IMAGE: 192.168.3.38:5000/algo/primer_demux
   ALI_ACR_REGISTRY_IMAGE: geneus-registry.cn-hongkong.cr.aliyuncs.com/algo/primer_demux
 
@@ -24,50 +37,96 @@ variables:
   STABLE_TAG: stable
 
 
+# ===============================
+# 1. Build temp image
+# ===============================
+
 build_temp_image:
   stage: build_temp_image
   script:
     - whoami
+    - id
     - echo "📦 Building temp image..."
-    - DOCKER_BUILDKIT=0 docker build -t $PROJECT_NAME:$TEMP_TAG .
+    - echo "Project name = $PROJECT_NAME"
+    - echo "Temp tag = $TEMP_TAG"
+    - DOCKER_BUILDKIT=1 docker build -t $PROJECT_NAME:$TEMP_TAG .
+    - docker image ls | grep "$PROJECT_NAME" || true
   rules:
-    # 分支提交时构建
-    - if: '$CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE != "web"'
-      when: on_success
-
-    # tag 发布时也必须构建
+    # tag 发布时也必须 build，否则 push_release 找不到 $PROJECT_NAME:$TEMP_TAG
     - if: '$CI_COMMIT_TAG'
       when: on_success
 
+    # 普通分支 push 时 build
+    - if: '$CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE != "web"'
+      when: on_success
+
+    - when: never
+
+
+# ===============================
+# 2. Smoke test
+# ===============================
 
 smoke_test:
   stage: smoke_test
+  needs:
+    - build_temp_image
   script:
     - echo "🧪 Running smoke test..."
     - whoami
     - id
+    - pwd
+
+    # 检查变量是否存在
+    - ': "${PRIMER_SMOKE_TEST_DIR:?PRIMER_SMOKE_TEST_DIR is not set}"'
+    - ': "${PRIMER_SMOKE_OUTPUT_DIR:?PRIMER_SMOKE_OUTPUT_DIR is not set}"'
 
     - echo "Smoke test dir = $PRIMER_SMOKE_TEST_DIR"
-    - test -n "$PRIMER_SMOKE_TEST_DIR"
+    - echo "Smoke output dir = $PRIMER_SMOKE_OUTPUT_DIR"
+
+    # 检查测试数据目录
     - test -d "$PRIMER_SMOKE_TEST_DIR"
     - ls -lh "$PRIMER_SMOKE_TEST_DIR"
 
-    - mkdir -p "$PRIMER_SMOKE_TEST_DIR/ci_test_output"
-    - rm -rf "$PRIMER_SMOKE_TEST_DIR/ci_test_output"/*
-    # - chmod -R 777 "$PRIMER_SMOKE_TEST_DIR/ci_test_output"
+    # 检查测试输入文件
+    - test -f "$PRIMER_SMOKE_TEST_DIR/Barcode2.fastq"
+    - test -f "$PRIMER_SMOKE_TEST_DIR/primer40_v2.fasta"
 
+    # 准备输出目录
+    - mkdir -p "$PRIMER_SMOKE_OUTPUT_DIR"
+
+    # 清空旧输出，避免上一次结果干扰本次 smoke test
+    - rm -rf "$PRIMER_SMOKE_OUTPUT_DIR"/*
+
+    # 确保 gitlab-runner 和 docker 容器内进程可写
+    - chmod -R 777 "$PRIMER_SMOKE_OUTPUT_DIR"
+
+    # 运行 smoke test
     - >
       python3 python_scripts/run_primer_test.py
       --test-file-dir "$PRIMER_SMOKE_TEST_DIR"
-      --output-root "$PRIMER_SMOKE_TEST_DIR/ci_test_output"
+      --output-root "$PRIMER_SMOKE_OUTPUT_DIR"
       --docker-image "$PROJECT_NAME:$TEMP_TAG"
 
+    # 打印输出结果
     - echo "Smoke test output:"
-    - find "$PRIMER_SMOKE_TEST_DIR/ci_test_output" -maxdepth 4 -type f -exec ls -lh {} \;
+    - find "$PRIMER_SMOKE_OUTPUT_DIR" -maxdepth 5 -type f -exec ls -lh {} \;
 
-  except:
-    - tags
-    - web
+  rules:
+    # tag 发布前也跑 smoke test
+    - if: '$CI_COMMIT_TAG'
+      when: on_success
+
+    # 普通分支 push 时跑 smoke test
+    - if: '$CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE != "web"'
+      when: on_success
+
+    - when: never
+
+
+# ===============================
+# 3. Push release image to local registry
+# ===============================
 
 push_release:
   stage: push_release
@@ -75,13 +134,31 @@ push_release:
     - smoke_test
   script:
     - echo "📤 Pushing release image..."
-    - docker tag $PROJECT_NAME:$TEMP_TAG $CI_REGISTRY_IMAGE:$RELEASE_TAG
-    - docker push $CI_REGISTRY_IMAGE:$RELEASE_TAG
-    - echo "📤 Pushing release image DONE. $CI_REGISTRY_IMAGE:$RELEASE_TAG"
+    - echo "Release tag = $RELEASE_TAG"
+    - ': "${RELEASE_TAG:?RELEASE_TAG is not set}"'
+
+    - echo "Source image = $PROJECT_NAME:$TEMP_TAG"
+    - echo "Target image = $CI_REGISTRY_IMAGE:$RELEASE_TAG"
+
+    - docker image inspect "$PROJECT_NAME:$TEMP_TAG"
+
+    - docker tag "$PROJECT_NAME:$TEMP_TAG" "$CI_REGISTRY_IMAGE:$RELEASE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE:$RELEASE_TAG"
+
+    - echo "📤 Pushing release image DONE."
+    - echo "$CI_REGISTRY_IMAGE:$RELEASE_TAG"
+
   rules:
+    # 只有 tag 才发布 release 镜像
     - if: '$CI_COMMIT_TAG'
       when: on_success
 
+    - when: never
+
+
+# ===============================
+# 4. Push release image to Aliyun ACR
+# ===============================
 
 push_ali:
   stage: push_ali
@@ -89,13 +166,25 @@ push_ali:
     - push_release
   script:
     - whoami
-    - echo "Pushing release image to Aliyun ACR"
+    - id
+
+    - echo "📤 Pushing release image to Aliyun ACR..."
+    - echo "Release tag = $RELEASE_TAG"
+    - ': "${RELEASE_TAG:?RELEASE_TAG is not set}"'
+
     - echo "Source image = ${CI_REGISTRY_IMAGE}:${RELEASE_TAG}"
     - echo "Target image = ${ALI_ACR_REGISTRY_IMAGE}:${RELEASE_TAG}"
-    - docker pull ${CI_REGISTRY_IMAGE}:${RELEASE_TAG}
-    - docker tag ${CI_REGISTRY_IMAGE}:${RELEASE_TAG} ${ALI_ACR_REGISTRY_IMAGE}:${RELEASE_TAG}
-    - docker push ${ALI_ACR_REGISTRY_IMAGE}:${RELEASE_TAG}
-    - echo "Push to Aliyun ACR done"
+
+    - docker pull "${CI_REGISTRY_IMAGE}:${RELEASE_TAG}"
+    - docker tag "${CI_REGISTRY_IMAGE}:${RELEASE_TAG}" "${ALI_ACR_REGISTRY_IMAGE}:${RELEASE_TAG}"
+    - docker push "${ALI_ACR_REGISTRY_IMAGE}:${RELEASE_TAG}"
+
+    - echo "Push to Aliyun ACR done."
+    - echo "${ALI_ACR_REGISTRY_IMAGE}:${RELEASE_TAG}"
+
   rules:
+    # 只有 tag 才推送到阿里云
     - if: '$CI_COMMIT_TAG'
       when: on_success
+
+    - when: never
