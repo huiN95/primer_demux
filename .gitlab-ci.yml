@@ -54,7 +54,7 @@ smoke_test:
 
     - mkdir -p "$PRIMER_SMOKE_TEST_DIR/ci_test_output"
     - rm -rf "$PRIMER_SMOKE_TEST_DIR/ci_test_output"/*
-    - chmod -R 777 "$PRIMER_SMOKE_TEST_DIR/ci_test_output"
+    # - chmod -R 777 "$PRIMER_SMOKE_TEST_DIR/ci_test_output"
 
     - >
       python3 python_scripts/run_primer_test.py
