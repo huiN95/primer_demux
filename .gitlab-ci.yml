@@ -46,26 +46,24 @@ smoke_test:
     - echo "🧪 Running smoke test..."
     - whoami
     - id
-    - echo "Smoke test dir = $primer_SMOKE_TEST_DIR"
-    - ls -lh "$primer_SMOKE_TEST_DIR"
 
-    # 输出目录放到你指定的 /data/CI_CD_DATASETS/PROJECT_PRIMER/smoke_test 下面
-    - mkdir -p "$primer_SMOKE_TEST_DIR/ci_test_output"
+    - echo "Smoke test dir = $PRIMER_SMOKE_TEST_DIR"
+    - test -n "$PRIMER_SMOKE_TEST_DIR"
+    - test -d "$PRIMER_SMOKE_TEST_DIR"
+    - ls -lh "$PRIMER_SMOKE_TEST_DIR"
 
-    # 清空旧结果，避免上一次结果干扰本次测试
-    - rm -rf "$primer_SMOKE_TEST_DIR/ci_test_output"/*
-
-    # 确保 gitlab-runner / docker 容器内用户可写
-    - chmod -R 777 "$primer_SMOKE_TEST_DIR/ci_test_output"
+    - mkdir -p "$PRIMER_SMOKE_TEST_DIR/ci_test_output"
+    - rm -rf "$PRIMER_SMOKE_TEST_DIR/ci_test_output"/*
+    - chmod -R 777 "$PRIMER_SMOKE_TEST_DIR/ci_test_output"
 
     - >
       python3 python_scripts/run_primer_test.py
-      --test-file-dir "$primer_SMOKE_TEST_DIR"
-      --output-root "$primer_SMOKE_TEST_DIR/ci_test_output"
+      --test-file-dir "$PRIMER_SMOKE_TEST_DIR"
+      --output-root "$PRIMER_SMOKE_TEST_DIR/ci_test_output"
       --docker-image "$PROJECT_NAME:$TEMP_TAG"
 
     - echo "Smoke test output:"
-    - find "$primer_SMOKE_TEST_DIR/ci_test_output" -maxdepth 4 -type f -exec ls -lh {} \;
+    - find "$PRIMER_SMOKE_TEST_DIR/ci_test_output" -maxdepth 4 -type f -exec ls -lh {} \;
 
   except:
     - tags
