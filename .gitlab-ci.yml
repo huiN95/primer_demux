@@ -98,8 +98,8 @@ smoke_test:
     # 清空旧输出，避免上一次结果干扰本次 smoke test
     - rm -rf "$PRIMER_SMOKE_OUTPUT_DIR"/*
 
-    # 确保 gitlab-runner 和 docker 容器内进程可写
-    - chmod -R 777 "$PRIMER_SMOKE_OUTPUT_DIR"
+    # # 确保 gitlab-runner 和 docker 容器内进程可写
+    # - chmod -R 777 "$PRIMER_SMOKE_OUTPUT_DIR"
 
     # 运行 smoke test
     - >
