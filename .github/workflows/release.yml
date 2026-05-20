@@ -1,4 +1,4 @@
-name: Release
+name: Publish Release
 
 on:
   push:
@@ -6,85 +6,65 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  # ========== 1. 跨平台编译 + 发 GitHub Release ==========
-  build-binaries:
-    name: Build ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
-          - target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
-          - target: x86_64-apple-darwin
-            os: macos-latest
-          - target: aarch64-apple-darwin
-            os: macos-latest
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - uses: taiki-e/upload-rust-binary-action@v1
-        with:
-          bin: primer_demux      # ← 改这里
-          target: ${{ matrix.target }}
-          archive: $bin-$target
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  # ========== 2. 发布到 crates.io ==========
   publish-crates:
     name: Publish to crates.io
     runs-on: ubuntu-latest
-    needs: build-binaries          # 二进制都构建成功再发，避免发了又撤
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libhts-dev clang libclang-dev
+
+      - name: Check package
+        run: cargo publish --dry-run --locked
+
       - name: Publish
-        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --locked
 
-  # ========== 3. 发布到个人 anaconda channel ==========
-  publish-conda:
-    name: Publish to anaconda.org
+  publish-anaconda:
+    name: Publish to Anaconda.org
     runs-on: ubuntu-latest
-    needs: build-binaries
-    defaults:
-      run:
-        shell: bash -l {0}         # 让 conda activate 在每步生效
+    needs: publish-crates
     steps:
       - uses: actions/checkout@v4
 
-      - uses: conda-incubator/setup-miniconda@v3
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
-          channels: conda-forge,bioconda
-          channel-priority: strict
+          python-version: "3.10"
+          channels: conda-forge,bioconda,defaults
 
-      - name: Install build tools
-        run: conda install -y conda-build anaconda-client
-
-      - name: Extract version from tag
-        run: echo "PKG_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+      - name: Install build dependencies
+        shell: bash -l {0}
+        run: |
+          conda install -y conda-build anaconda-client
+          sudo apt-get update
+          sudo apt-get install -y libhts-dev clang libclang-dev
 
       - name: Build conda package
-        run: conda build conda-recipe --output-folder ./conda-build
-
-      - name: Upload to anaconda.org
-        env:
-          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        shell: bash -l {0}
         run: |
-          anaconda -t "$ANACONDA_TOKEN" upload \
-            --user huin95 \
-            --force \
-            ./conda-build/**/primer_demux-*.conda \
-            ./conda-build/**/primer_demux-*.tar.bz2 || true
+          export LIBCLANG_PATH=/usr/lib/llvm-14/lib
+          conda config --set anaconda_upload no
+          conda build --output-folder ./conda-out ./conda-recipe
+
+      - name: Upload to Anaconda.org
+        shell: bash -l {0}
+        env:
+          BINSTAR_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+          ANACONDA_CLIENT_FORCE_STANDALONE: "true"
+        run: |
+          mapfile -t packages < <(find ./conda-out -type f \( -name "*.tar.bz2" -o -name "*.conda" \))
+          test ${#packages[@]} -gt 0
+          anaconda upload --user huiN95 --force "${packages[@]}"

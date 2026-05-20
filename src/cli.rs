@@ -5,7 +5,7 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(
     name = "primer demux",
-    version = "v0.0.2",
+    version = "v0.0.4",
     about = "Approximate matching of given patterns in sequence files"
 )]
 pub struct Cli {

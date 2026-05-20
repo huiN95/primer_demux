@@ -324,8 +324,8 @@ fn make_header<P: AsRef<Path>>(input: P) -> bam::Header {
 
     let mut hd = bam::header::HeaderRecord::new(b"PG");
     hd.push_tag(b"PN", &"primer_demux");
-    hd.push_tag(b"ID", &"v0.0.2");
-    hd.push_tag(b"VN", &"v0.0.2");
+    hd.push_tag(b"ID", &"v0.0.4");
+    hd.push_tag(b"VN", &"v0.0.4");
     hd.push_tag(b"CL", &cmdline);
     header.push_record(&hd);
 

@@ -1,4 +1,4 @@
-# Primer Demux (v0.0.2)
+# Primer Demux (v0.0.4)
 
 `primer_demux` is a high-performance tool written in Rust designed for demultiplexing sequencing reads based on primer sequences (including connected reads). It supports multiple input and output formats (FASTA, FASTQ, BAM) and leverages the Myers bit-parallel string matching algorithm for fast approximate matching.
 

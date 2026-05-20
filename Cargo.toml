@@ -1,70 +1,44 @@
 [package]
 name = "primer_demux"
-version = "0.0.2"
-edition = "2021"
+version = "0.0.4"
+edition = "2024"
+authors = ["adam <woshuishangpu@outlook.com>"]
+description = "A high-performance tool for demultiplexing sequencing reads based on primer sequences using Myers algorithm."
+license = "MIT"
+repository = "https://github.com/huiN95/primer_demux"
+homepage = "https://github.com/huiN95/primer_demux"
+readme = "README.md"
+keywords = ["bioinformatics", "demultiplexing", "sequencing", "primer"]
+categories = ["science", "command-line-utilities"]
 
 [dependencies]
 log = "0.4.29"
 env_logger = "0.11.5"
 toml = "0.9.7"
 bio = "3.0.0"
-
-
-tempfile = "3.24.0"
-flate2 = "1.1.8"
-tar = "0.4.43"
-
-clap = { version = "4.5", features = ["derive", "env"] }
-anyhow = "1.0.100"
-
-# lazy_static="1.5.0"
-ndarray = "0.17.2"
-crossbeam = "0.8.4"
-tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.19", features = [
-    "json",
+csv = "1"
+anyhow = "1.0.102"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+metrics = "0.24"
+metrics-exporter-prometheus = "0.18"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
     "env-filter",
-    "fmt",
-    "time",
-    "local-time",
     "chrono",
+    "local-time",
 ] }
-time = "0.3.45"
-
-rayon = "1.11.0"
-tracing-appender = "0.2.4"
-
-num_cpus = "1.16.0"
-glob = "0.3.3"
-regex = "1.12.2"
-rust-htslib = "=0.46.0"
-
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.149"
-indicatif = "0.18.3"
-# needletail = "0.5"
+tracing-appender = "0.2"
+crossbeam = "0.8"
+indicatif = "0.18"
+rust-htslib = "1.0.0"
 seq_io = "0.3.4"
-itertools = "0.14.0"
-indexmap = "2.13.0"
-once_cell = "1.21.3"
-metrics = "0.24.3"
-metrics-exporter-prometheus = "0.18.1"
-walkdir = "2.5.0"
-thiserror = "2.0.18"
-bio-types = "1.0.4"
-
-##[profile.release]
-##debug = true
-#[profile.release]
-#debug = 0
-#strip = "symbols"
-#lto = true
-#codegen-units = 1
-#panic = "abort"
+walkdir = "2.5"
+clap = { version = "4.5", features = ["derive", "env"] }
 
 [profile.release]
-debug = 1
-strip = "debuginfo" # Or don't strip, separate symbols in CI
-lto = "thin"
+debug = 0
+strip = "symbols"
+lto = true
 codegen-units = 1
-panic = "unwind"
+panic = "abort"

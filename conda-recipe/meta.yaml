@@ -1,23 +1,37 @@
 {% set name = "primer_demux" %}
-{% set version = "0.0.2" %}
+{% set version = "0.0.4" %}
 
 package:
   name: {{ name|lower }}
   version: {{ version }}
 
 source:
-  url: https://github.com/huiN95/{{ name }}/archive/refs/tags/v{{ version }}.tar.gz
+  path: ..
 
 build:
   number: 0
-  script:
-    - cargo install --locked --root $PREFIX --path .   # [unix]
-    - cargo install --locked --root %PREFIX% --path .  # [win]
+  run_exports:
+    - {{ pin_subpackage(name, max_pin="x.x") }}
 
 requirements:
   build:
+    - {{ compiler('c') }}
+    - {{ stdlib('c') }}
     - {{ compiler('rust') }}
-    - cargo
+    - pkg-config
+    - make
+  host:
+    - htslib
+    - openssl
+    - zlib
+    - bzip2
+    - xz
+  run:
+    - htslib
+    - openssl
+    - zlib
+    - bzip2
+    - xz
 
 test:
   commands:
