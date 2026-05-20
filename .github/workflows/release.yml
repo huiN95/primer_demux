@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ========== 1. 跨平台编译 + 发 GitHub Release ==========
+  build-binaries:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: primer_demux      # ← 改这里
+          target: ${{ matrix.target }}
+          archive: $bin-$target
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ========== 2. 发布到 crates.io ==========
+  publish-crates:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    needs: build-binaries          # 二进制都构建成功再发，避免发了又撤
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  # ========== 3. 发布到个人 anaconda channel ==========
+  publish-conda:
+    name: Publish to anaconda.org
+    runs-on: ubuntu-latest
+    needs: build-binaries
+    defaults:
+      run:
+        shell: bash -l {0}         # 让 conda activate 在每步生效
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          channels: conda-forge,bioconda
+          channel-priority: strict
+
+      - name: Install build tools
+        run: conda install -y conda-build anaconda-client
+
+      - name: Extract version from tag
+        run: echo "PKG_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      - name: Build conda package
+        run: conda build conda-recipe --output-folder ./conda-build
+
+      - name: Upload to anaconda.org
+        env:
+          ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+        run: |
+          anaconda -t "$ANACONDA_TOKEN" upload \
+            --user huin95 \
+            --force \
+            ./conda-build/**/primer_demux-*.conda \
+            ./conda-build/**/primer_demux-*.tar.bz2 || true
